@@ -1,0 +1,15 @@
+{
+  "config": {
+    "title": "Eaton xComfort Bridge",
+    "step": {
+      "confirm": {
+        "title": "Eaton xComfort Bridge",
+        "description": "Do you want to set up Eaton xComfort Bridge?"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single configuration of Eaton xComfort Bridge is possible.",
+      "no_devices_found": "No Eaton xComfort Bridge devices found on the network."
+    }
+  }
+}

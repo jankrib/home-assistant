@@ -1,0 +1,14 @@
+{
+  "domain": "xcomfort_bridge",
+  "name": "Eaton xComfort Bridge",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/xcomfort_bridge",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@jankrib"
+  ]
+}

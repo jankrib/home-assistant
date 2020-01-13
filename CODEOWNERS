@@ -466,6 +466,7 @@ homeassistant/components/wled/* @frenck
 homeassistant/components/workday/* @fabaff
 homeassistant/components/worldclock/* @fabaff
 homeassistant/components/xbox_live/* @MartinHjelmare
+homeassistant/components/xcomfort_bridge/* @jankrib
 homeassistant/components/xfinity/* @cisasteelersfan
 homeassistant/components/xiaomi_aqara/* @danielhiversen @syssi
 homeassistant/components/xiaomi_miio/* @rytilahti @syssi
