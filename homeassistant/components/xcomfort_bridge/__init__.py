@@ -1,17 +1,33 @@
 """The Eaton xComfort Bridge integration."""
 import asyncio
-
+import logging
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import (
+    CONF_IP_ADDRESS,
+    EVENT_HOMEASSISTANT_STOP,
+)
+from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
+from xcomfort import Bridge
 
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
+_LOGGER = logging.getLogger(__name__)
 
-# TODO List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                vol.Required(CONF_IP_ADDRESS): cv.string,
+                vol.Required("authkey"): cv.string,
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
 PLATFORMS = ["light"]
 
 
@@ -22,8 +38,16 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Eaton xComfort Bridge from a config entry."""
-    # TODO Store an API object for your platforms to access
-    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
+
+    ip_address = entry.data.get(CONF_IP_ADDRESS)
+    auth_key = entry.data.get("authkey")
+
+    bridge = await Bridge.connect(ip_address, auth_key)
+
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    hass.data[DOMAIN][entry.entry_id] = bridge
 
     for component in PLATFORMS:
         hass.async_create_task(
@@ -35,6 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
+
+    bridge = hass.data[DOMAIN][entry.entry_id]
+
+    bridge.close()
+
     unload_ok = all(
         await asyncio.gather(
             *[

@@ -9,44 +9,43 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components.light import ATTR_BRIGHTNESS, PLATFORM_SCHEMA, Light
 from homeassistant.const import CONF_IP_ADDRESS
 
-from xcomfort import Bridge
+from xcomfort import Bridge, Light as XLight
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 # Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {vol.Required(CONF_IP_ADDRESS): cv.string, vol.Required("authkey"): cv.string}
-)
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({})
 
 
-async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
-    """Set up the Awesome Light platform."""
-    # Assign configuration variables.
-    # The configuration check takes care they are present.
-    ip_address = config[CONF_IP_ADDRESS]
-    auth_key = config["authkey"]
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Platform uses config entry setup."""
+    pass
 
-    _LOGGER.info("Setup xComfort bridge: %s", ip_address)
 
-    bridge = await Bridge.connect(ip_address, auth_key)
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up Abode light devices."""
+    bridge = hass.data[DOMAIN][entry.entry_id]
+
+    if not isinstance(bridge, Bridge):
+        _LOGGER.error(f"Invalid bridge. Got {bridge} for {entry.entry_id}")
 
     devices = await bridge.get_devices()
 
-    lights = []
+    lights = filter(lambda d: isinstance(d, XLight), devices.values())
+    lights = map(lambda d: XComfortLight(bridge, d), lights)
+    lights = list(lights)
 
-    for device_id in devices:
-        lights.append(XComfortLight(bridge, devices[device_id]))
-
-    # await bridge.close()
-
-    await async_add_devices(lights)
+    async_add_entities(lights)
 
 
 class XComfortLight(Light):
-    """Representation of an Awesome Light."""
+    """Representation of an xComfort Light."""
 
-    def __init__(self, bridge, device):
+    def __init__(self, bridge: Bridge, device: XLight):
         """Initialize an AwesomeLight."""
+        super().__init__()
+
         self._bridge = bridge
         self._device = device
 
