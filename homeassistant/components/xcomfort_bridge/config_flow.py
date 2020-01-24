@@ -28,7 +28,7 @@ class XComfortBridgeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # TODO Validate user input
 
             return self.async_create_entry(
-                title=f"xComfort Bridge {user_input[CONF_IP_ADDRESS]}",
+                title=f"{user_input[CONF_IP_ADDRESS]}",
                 data={
                     CONF_IP_ADDRESS: user_input[CONF_IP_ADDRESS],
                     "authkey": user_input["authkey"],
