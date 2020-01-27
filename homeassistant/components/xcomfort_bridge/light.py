@@ -7,6 +7,7 @@ import homeassistant.helpers.config_validation as cv
 
 # Import the device class from the component that you want to support
 from homeassistant.components.light import ATTR_BRIGHTNESS, PLATFORM_SCHEMA, Light
+from homeassistant.helpers.entity import Entity
 from homeassistant.const import CONF_IP_ADDRESS
 
 from xcomfort import Bridge, Light as XLight
@@ -33,25 +34,39 @@ async def async_setup_entry(hass, entry, async_add_entities):
     devices = await bridge.get_devices()
 
     lights = filter(lambda d: isinstance(d, XLight), devices.values())
-    lights = map(lambda d: XComfortLight(bridge, d), lights)
+    lights = map(lambda d: XComfortLight(hass, bridge, d), lights)
     lights = list(lights)
 
     async_add_entities(lights)
 
 
-class XComfortLight(Light):
-    """Representation of an xComfort Light."""
+class XComfortDevice(Entity):
+    """Representation of an xComfort Device."""
 
-    def __init__(self, bridge: Bridge, device: XLight):
-        """Initialize an AwesomeLight."""
-        super().__init__()
-
+    def __init__(self, hass, bridge: Bridge, device: XLight):
+        self.hass = hass
         self._bridge = bridge
         self._device = device
 
+        # self.entity_id = f"{DOMAIN}.d{device.device_id}"
+
         self._name = device.name
-        self._state = device.switch
-        self._brightness = None
+        self._state = None
+
+        self._device.state.subscribe(self._state_change)
+
+    def _state_change(self, state):
+        update = self._state is not None
+        self._state = state
+
+        _LOGGER.warning(f"_state_change : {state}")
+
+        if update:
+            self.schedule_update_ha_state()
+
+
+class XComfortLight(XComfortDevice, Light):
+    """Representation of an xComfort Light."""
 
     @property
     def name(self):
@@ -60,7 +75,7 @@ class XComfortLight(Light):
 
     @property
     def should_poll(self) -> bool:
-        return True  # TODO Change to false and call schedule_update_ha_state() when state changes
+        return False
 
     @property
     def brightness(self):
@@ -69,12 +84,12 @@ class XComfortLight(Light):
         This method is optional. Removing it indicates to Home Assistant
         that brightness is not supported for this light.
         """
-        return self._brightness
+        return None
 
     @property
     def is_on(self):
         """Return true if light is on."""
-        return self._state
+        return self._state.switch
 
     async def async_turn_on(self, **kwargs):
         """Instruct the light to turn on.
@@ -82,13 +97,20 @@ class XComfortLight(Light):
         You can skip the brightness part if your light does not support
         brightness control.
         """
-        await self._bridge.switch_device(self._device.device_id, True)
-        self._state = True
+        switch_task = self._device.switch(True)
+        self._state.switch = True
+        self.schedule_update_ha_state()
+
+        await switch_task
 
     async def async_turn_off(self, **kwargs):
         """Instruct the light to turn off."""
-        await self._bridge.switch_device(self._device.device_id, False)
-        self._state = False
+        switch_task = self._device.switch(False)
+        self._state.switch = False
+        self.schedule_update_ha_state()
+
+        await switch_task
 
     def update(self):
         pass
+

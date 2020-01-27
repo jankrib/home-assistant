@@ -42,7 +42,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     ip_address = entry.data.get(CONF_IP_ADDRESS)
     auth_key = entry.data.get("authkey")
 
-    bridge = await Bridge.connect(ip_address, auth_key)
+    bridge = Bridge(ip_address, auth_key)
+    bridge.logger = lambda x: _LOGGER.warning(x)
+    # hass.async_create_task(bridge.run())
+    asyncio.create_task(bridge.run())
 
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
