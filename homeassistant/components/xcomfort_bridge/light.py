@@ -6,12 +6,18 @@ import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 
 # Import the device class from the component that you want to support
-from homeassistant.components.light import ATTR_BRIGHTNESS, PLATFORM_SCHEMA, Light
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    SUPPORT_BRIGHTNESS,
+    PLATFORM_SCHEMA,
+    Light,
+)
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import CONF_IP_ADDRESS
 
 from xcomfort import Bridge, Light as XLight
 from .const import DOMAIN
+from math import ceil
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +54,7 @@ class XComfortDevice(Entity):
         self._bridge = bridge
         self._device = device
 
-        # self.entity_id = f"{DOMAIN}.d{device.device_id}"
+        # self.entity_id = f"light.d{device.device_id}"
 
         self._name = device.name
         self._state = None
@@ -84,19 +90,28 @@ class XComfortLight(XComfortDevice, Light):
         This method is optional. Removing it indicates to Home Assistant
         that brightness is not supported for this light.
         """
-        return None
+        return int(255.0 * self._state.dimmvalue / 99.0)
 
     @property
     def is_on(self):
         """Return true if light is on."""
         return self._state.switch
 
-    async def async_turn_on(self, **kwargs):
-        """Instruct the light to turn on.
+    @property
+    def supported_features(self):
+        """Flag supported features."""
+        if self._device.dimmable:
+            return SUPPORT_BRIGHTNESS
+        return 0
 
-        You can skip the brightness part if your light does not support
-        brightness control.
-        """
+    async def async_turn_on(self, **kwargs):
+        """Instruct the light to turn on."""
+        if ATTR_BRIGHTNESS in kwargs and self._device.dimmable:
+            # Convert Home Assistant brightness (0-255) to Abode brightness (0-99)
+            # If 100 is sent to Abode, response is 99 causing an error
+            await self._device.dimm(ceil(kwargs[ATTR_BRIGHTNESS] * 99 / 255.0))
+            return
+
         switch_task = self._device.switch(True)
         self._state.switch = True
         self.schedule_update_ha_state()
